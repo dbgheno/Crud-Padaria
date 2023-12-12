@@ -17,6 +17,15 @@ const produtosPadaria = [
     { id: 'LP1T45ZS', nome: 'Manteiga', estoque: 16, preco: 35, }
 ]
 
+const pedidos = [
+    { cliente: 'Daniel', produtos: [{ produto: { id: 'LIPOTUFO', nome: 'Pão de forma', estoque: 40, preco: 6, }, quantidade: 2 }], valorTotal: 12, data: 20231130 },
+    { cliente: 'Daniel', produtos: [{ produto: { id: 'LP1T55AB', nome: 'Cueca virada', estoque: 25, preco: 3, }, quantidade: 5 }], valorTotal: 15, data: 20231202 }
+]
+
+const clientes = [
+    { cliente: 'Daniel', pedidos: [pedidos[0], pedidos[1]] }
+]
+
 function bemVindo() {
     let opcao = prompt(`
         Bem vindo ao sistema da Padaria do Seu João!
@@ -39,7 +48,7 @@ function bemVindo() {
         case 2: novoProduto(); break;
         case 3: atualizarProduto(); break;
         case 4: removerProduto(); break;
-        case 5: pedidos(); break;
+        case 5: cadastrarPedido(); break;
         case 6: somarEstoque(); break;
         case 7: relatorios(); break;
         case 8: sairDoSistema(); break;
@@ -47,6 +56,32 @@ function bemVindo() {
     }
 }
 bemVindo();
+
+// Função da data
+function retornarData() {
+    const agora = new Date()
+    const ano = agora.getFullYear()
+    const mes = (agora.getMonth() + 1).toString().padStart(2, '0') // Adiciona zero à esquerda se for menor que 10
+    const dia = agora.getDate().toString().padStart(2, '0') // Adiciona zero à esquerda se for menor que 10
+    const dataFormatada = `${ano}${mes}${dia}`
+    return Number(dataFormatada)
+}
+
+// histórico pedidos
+function historicoPedidos() { // percorre e apresenta o histórico de pedidos
+    let listaPedidos = ''
+    const options = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+
+    pedidos.forEach((pedido, index) => {
+        listaPedidos += `Pedido ${index + 1} - Cliente: ${pedido.cliente}; Valor: R$${pedido.valorTotal.toLocaleString('pt-BR', options)}.\n`
+        pedido.produtos.forEach((item) => {
+            listaPedidos += `${item.produto.nome} x ${item.quantidade} = R$${(item.produto.preco * item.quantidade).toLocaleString('pt-BR', options)}\n`
+        });
+    });
+
+    if (listaPedidos) alert(`Histórico de Pedidos:\n${listaPedidos}`)
+    else alert(`Nenhum pedido registrado!`)
+}
 
 // Opção 1 - Listagem de produtos
 // Listar Todos os Produtos Disponíveis: O sistema deve ser capaz de exibir uma lista de todos os produtos disponíveis na padaria. João vai poder escolher no momento entre listagem simplificada, por ordem de preço, ou por ordem alfabética.
@@ -138,30 +173,94 @@ function removerProduto(list = produtosPadaria) {
 
 // Opção 5 - Receber pedidos dos clientes
 // O sistema deve permitir que os clientes façam pedidos. Um pedido deve conter um ou mais produtos e a quantidade desejada de cada um. O sistema deve armazenar um histórico de pedidos.
-function pedidos(list = produtosPadaria) {
-    const novoPedido = confirm(`Você deseja cadastrar um novo pedido?\nClick em "Cancel" caso queria apenas consultar o histórico de pedidos.`)
-    if (novoPedido) {
-        let produtos = ''
-        const options = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-        list.forEach((produto, numero) => produtos += `Número: ${numero} | Produto: ${produto.nome} | Estoque: ${produto.estoque} | Preço: R$ ${produto.preco.toLocaleString('pt-BR', options)}\n`)
+function cadastrarPedido(list = produtosPadaria) {
+    const novoPedido = confirm('Você deseja cadastrar um novo pedido?\nClique em "Cancel" caso queira apenas consultar o histórico de pedidos.')
+    const totalDePedidosExistentes = pedidos.length
 
-        function escolhaProduto() {
-            let qualProduto = '', quantidade = ''
-            while (qualProduto === '') qualProduto = prompt(`Digite o número do produto que você deseja incluir no pedido:\n${produtos}`)
-            if (qualProduto !== null) {
-                //identificar qual é o produto que foi escolhido (pelo index referente)
-                // while (quantidade === '' || quantidade <= 0 || isNaN(quantidade)) quantidade = prompt(`Digite a quantidade de `'${nome do produto}'` que você deseja incluir:\nEstoque disponível:`'${estoque do produto}'`\n(digite um número válido e compatível com o estoque.)`)
-                // if (quantidade !== null) {
-                //     array.push({ produto: '', quantidade: '' })
-                    // estoque do produto tal -= quantidade
+    if (novoPedido) {
+        function fazerPedido() {
+            let cliente = '', produtos = [], totalPedido = 0, data = 0
+
+            function qualCliente() { // busca ou cadastra um novo cliente
+                const nomeCliente = prompt(`O pedido será registrado no nome de qual cliente?`)
+                if (nomeCliente) {
+                    cliente = nomeCliente
+                    if (clientes.some(cliente => cliente.cliente === nomeCliente)) {
+                        alert(`Cliente ${nomeCliente} encontrado com sucesso!`)
+                    } else {
+                        alert(`Cliente ${nomeCliente} cadastrado com sucesso!`)
+                        clientes.push({ cliente: nomeCliente, pedidos: [] })
+                    }
+                } else {
+                    const sairCadastro = confirm(`Você deseja cancelar o cadastro do pedido?`)
+                    if (sairCadastro) { bemVindo(); return }
+                    else { qualCliente(); return }
+                }
+            }
+
+            qualCliente()
+            cadastrarPedido()
+
+            function cadastrarPedido() { // cadastra um novo pedido ao cliente
+                let produtosDisponiveis = ''
+                const options = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                list.forEach((produto, numero) => produtosDisponiveis += `Número: ${numero} | Produto: ${produto.nome} | Estoque: ${produto.estoque} | Preço: R$ ${produto.preco.toLocaleString('pt-BR', options)}\n`)
+
+                function escolhaProduto() {
+                    let qualProduto = '', quantidade = ''
+                    while (qualProduto === '' || !isNaN(qualProduto) || qualProduto > 0 || qualProduto <= list.length) qualProduto = Number(prompt(`Digite o número do produto que você deseja incluir no pedido de ${cliente}:\n${produtosDisponiveis}`))
+                    if (qualProduto) {
+                        while (quantidade === '' || quantidade <= 0 || isNaN(quantidade) || quantidade > list[qualProduto].estoque) { quantidade = prompt(`Digite a quantidade de ${list[qualProduto].nome} que você deseja incluir:\nEstoque disponível:${list[qualProduto].estoque}\n(digite um número válido e compatível com o estoque.)`) }
+                        if (quantidade) { const produtoPedido = { produto: list[qualProduto], quantidade: parseInt(quantidade) }; return produtoPedido }
+                        else { escolhaProduto(); return }
+                    }
+                    return null;
+                }
+
+                const produto = escolhaProduto() // chama a função e atribui seu retorno a const "produto"
+                if (produto) produtoEscolhido() // se o retorno de produto não for null, faz-se a verificação do produto escolhido
+
+                function produtoEscolhido() { // verifica se o produto escolhido já continha no pedido
+                    const produtoExistenteIndex = produtos.findIndex((item) => item.produto.nome === produto.nome)
+                    if (produtoExistenteIndex !== -1) produtos[produtoExistenteIndex].quantidade += produto.quantidade
+                    else produtos.push(produto)
+                    list.find((p) => p.id === produto.produto.id).estoque -= produto.quantidade //find qual produto de list tem id equivalente ao produto de produtos e diminui o .estoque do produto de list pela quantidade do produto produtos
+                }
+
+                if (produtos.length === 0) {
+                    const anular = confirm(`Você deseja anular este pedido`)
+                    if (anular) { bemVindo(); return }
+                    else { cadastrarPedido() }
+                } else {
+                    let maisProduto = confirm('Você deseja adicionar mais algum produto no pedido?')
+                    while (maisProduto) {
+                        const produto = escolhaProduto()
+                        if (produto) produtoEscolhido()
+                        maisProduto = confirm('Você deseja adicionar mais algum produto no pedido?')
+                    }
+
+                    produtos.forEach((produto) => (totalPedido += produto.produto.preco * produto.quantidade))
+                    data = retornarData()
+                    const pedido = { cliente: cliente, produtos: produtos, valorTotal: totalPedido, data: data }
+                    pedidos.push(pedido);
+
+                    const clienteIndex = clientes.findIndex((c) => c.cliente === cliente)
+                    clientes[clienteIndex].pedidos.push(pedido)
                 }
             }
         }
-    }
-// } FAZER ARRAY DO HISTÓRICO DE PEDIDOS NO ESCOPO GLOBAL
-// FAZER OPÇÃO 7
+        fazerPedido()
+        maisPedido()
 
-
+        function maisPedido() {
+            if (pedidos.length > totalDePedidosExistentes) {
+                const maisUmPedido = confirm(`Deseja cadastrar mais um pedido?`);
+                if (maisUmPedido) { fazerPedido(); maisPedido(); return }
+                else { historicoPedidos(); bemVindo(); return }
+            } else { historicoPedidos(); bemVindo(); return }
+        }
+    } else { historicoPedidos(); bemVindo(); return }
+}
 
 // Opção 6 - Somar valor do estoque
 // João deve poder somar o preço de venda do seu estoque
@@ -189,8 +288,18 @@ function somarEstoque(list = produtosPadaria) {
 
 // Opção 7 - Relatório Diarios
 // João deve poder fazer um relatório das vendas que aconteceram em um período específico que ele selecionar. Deve conter quantas vendas foram realizadas e qual o faturamento.
-function relatorios(list = produtosPadaria) {
-
+function relatorios() {
+    const opcoes = confirm(`Você quer ver um relatório completo ou entre datas específicas?\n(Click em "Ok" para o completo ou "Cancel" para entre datas)`)
+    if (opcoes) { historicoPedidos(); bemVindo(); return }
+    else {
+        let primeiraData = Number.MAX_SAFE_INTEGER, ultimaData = Number.MIN_SAFE_INTEGER, dataInicial = '', dataFinal = ''
+        pedidos.forEach(pd => { if (pd.data < primeiraData) primeiraData = pd.data })
+        pedidos.forEach(ud => { if (ud.data > ultimaData) ultimaData = ud.data })
+        while (!isNaN(dataInicial) || dataInicial.length !== 8 || dataInicial === '' || dataInicial < primeiraData) dataInicial = Number(prompt(`Digite a data inicial do relatório:\n(formato aceito DDMMAAAA. Primeira data registrada: ${primeiraData})`))
+        if (!ultimaData) { bemVindo(); return }
+        while (!isNaN(dataFinal) || dataFinal.length !== 8 || dataFinal === '' || dataFinal > ultimaData) dataFinal = Number(prompt(`Digite a data final do relatório:\n(formato aceito DDMMAAAA. Última data registrada: ${ultimaData})`))
+        if (!ultimaData) { bemVindo(); return }
+    }
 }
 
 // Opção 8 - Sair o sistema
